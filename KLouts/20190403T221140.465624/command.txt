@@ -1,0 +1,1 @@
+train_a3c_gym.py 32 --steps 20000000000 --env bergmankl-v0 --outdir /scratch/codylong/BergmanKL/ --gamma 0.9 --nmod 15 --beta 1 --eval-interval 1000 --arch FFSoftmax --numdraws 500 --stepsize 1 --datafile CYdata/h11=15.txt --nbins 50

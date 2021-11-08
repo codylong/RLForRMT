@@ -1,0 +1,1 @@
+train_a3c_gym.py 32 --steps 10000000 --env bergmankl-v0 --outdir /scratch/codylong/BergmanKL-50/ --gamma 1 --nmod 50 --beta 1 --eval-interval 10000 --arch FFSoftmax --numdraws 100 --stepsize 0.01 --datafile /scratch/codylong/tree_metric_evals/geoms1.txt --nbins 100

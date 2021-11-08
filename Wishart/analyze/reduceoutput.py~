@@ -1,0 +1,27 @@
+import subprocess
+import sys
+
+infile, outfile = sys.argv[1], sys.argv[2]
+
+f = subprocess.check_output("cat "+infile,shell=True)
+lines = f.split("\n")
+
+pstates = []
+newlines = ""
+
+for l in lines:
+    if len(l) > 0 and l[0] == 'p':
+        lindex, rindex = l.index('['), l.index(']')
+        s = l[lindex:rindex+1]
+        s = s.replace('mpf(\'','').replace('\')','').replace('.0','')
+        if s not in pstates:
+            pstates.append(s)
+            newlines += l+"\n"
+    else:
+        newlines += l+"\n"
+
+f = open(outfile,"w")
+f.write(newlines)
+f.close()
+
+

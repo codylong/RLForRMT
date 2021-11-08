@@ -1,0 +1,1 @@
+put file in chainerrl import directory, i.e. ~/.local/lib/python2.7/site-packages/chainerrl/experiments/ or .../agents for a local install

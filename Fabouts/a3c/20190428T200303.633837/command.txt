@@ -1,0 +1,1 @@
+train_a3c_gym_new.py 32 --steps 20000000000 --env cc-v0 --outdir /scratch/codylong/wishart/output_dqn --gamma 0.99 --eps 1e-50 --nmod 25 --sigma 0.0001 --beta 0.2 --eval-interval 2000000 --reward-d-pow 1 --arch FFSoftmax

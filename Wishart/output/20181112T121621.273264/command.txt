@@ -1,0 +1,1 @@
+train_a3c_gym.py 4 --steps 10000 --env wishart-v0 --outdir output/ --mean 0 --sigma 0.1 --nmod 2 --eval-interval 1000

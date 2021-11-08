@@ -1,0 +1,147 @@
+import pandas as pd
+from lib import *
+import os
+from matplotlib import pyplot as plt
+import seaborn as sns
+
+class Wishart_Experiment:
+
+    def __init__(self,dir):
+        self.dir = dir
+        if dir[len(dir)-1] != '/': self.dir += '/'
+        self.p, self.s = {'worker': [], 'time': [], 'cc':  [], 'state': []}, {'worker': [], 'time': [], 'cc':  [], 'state': []}
+        self.scores, self.steps, self.gamma, self.reward_fct, self.env, self.nmod, self.sigma, self.eps, self.metric_index = {}, None, None, None, None, None, None, None, None
+        self.read_command_txt()
+        self.read_output_txt()
+        self.read_scores_txt()
+
+    def read_output_txt(self):
+        filename = self.dir + "output.txt"
+        try:
+            f = open(filename,'r')
+        except IOError:
+            print self.dir + ": ", filename, 'not found'
+            return None
+        linelists = [[l.replace(',','').replace('(','').replace(')','').replace(':','').replace('[','').replace(']','') for l in k.split(' ')] for k in f.read().split('\n')]
+        f.close()
+        df_dict = {}
+        for l in linelists:
+            key, data = l[0], l[1:]
+            if key == 'head':
+                self.eps, self.nmod, self.sigma, self.metric_index = float(data[0]), int(data[1]), float(data[2]), int(data[3])
+            elif key == "p": 
+                self.add_p(data)
+            elif key == "s": 
+                self.add_s(data)
+        
+        self.p_df = pd.DataFrame(self.p)
+        self.s_df = pd.DataFrame(self.s)
+
+    def read_scores_txt(self):
+        filename = self.dir + "scores.txt"
+        try:
+            f = open(filename,'r')
+        except IOError:
+            print self.dir + ": ", filename, 'not found'
+            return None
+        scoresfile = [n.split("\t") for n in f.read().split("\n")]
+        f.close()
+        scores_head = scoresfile[0]
+        scores = [[cast_int_then_float(l) for l in p] for p in scoresfile[1:len(scoresfile)-1]]
+        for key in scores_head: 
+            self.scores[key] = []
+            idx = scores_head.index(key)
+            for i in range(len(scores)):
+                self.scores[key].append(scores[i][idx])
+        self.scores_df = pd.DataFrame(self.scores)
+
+    def read_command_txt(self):
+        filename = self.dir + "command.txt"
+        try:
+            f = open(filename,'r')
+        except IOError:
+            print self.dir + ": ", filename, 'not found'
+            return None
+        words = [[l for l in k.split(' ')] for k in f.read().split('\n')][0]
+        f.close()
+        if '--steps' in words: self.steps = int(words[words.index('--steps')+1])
+        if '--reward-fct' in words: self.reward_fct = words[words.index('--reward-fct')+1]
+        if '--env' in words: self.env = words[words.index('--env')+1]
+        if '--gamma' in words: self.gamma = float(words[words.index('--gamma')+1])       
+    
+    def add_p(self,tup): # add positive
+        self.p['worker'].append(int(tup[0]))
+        self.p['time'].append(int(tup[1]))
+        self.p['cc'].append(float(tup[2]))
+        self.p['state'].append([int(l) for l in tup[3:]])
+
+
+    def add_s(self,tup): # add solution
+        self.s['worker'].append(int(tup[0]))
+        self.s['time'].append(int(tup[1]))
+        self.s['cc'].append(float(tup[2]))
+        self.s['state'].append([int(l) for l in tup[3:]])   
+
+    def min_cc(self): 
+        p_min = 1e10
+        if len(self.p_df['cc']) > 1:
+            p_min = min(self.p_df['cc'])
+        s_min = 1e10
+        if len(self.s_df['cc']) > 1:
+            s_min = min(self.s_df['cc'])
+        return min([p_min,s_min])
+
+    def max_score(self): 
+        if len(self.scores['max']) > 0: return max(self.scores['max'])
+        return -1e10
+
+    def scores_plot(self):
+        ax = sns.lmplot(x="steps",y="mean",data=self.scores_df,fit_reg=False)
+        ax.set_xticklabels(rotation=30)
+        ax.set(yscale="log")
+        plt.ylim(min_pos_mean(self.scores_df)/3, max_pos_mean(self.scores_df)*3)
+
+    def num_solutions(self): return len(self.s['cc'])
+
+    def exp_desc_dict(self):
+        return {'env': self.env, 'eps':self.eps, 'gamma': self.gamma, 'nmod': self.nmod, 'metric_index': self.metric_index, 'sigma': self.sigma, 'reward_fct': self.reward_fct, 'steps': self.steps}
+
+
+class Wishart_Experiments:
+
+    def __init__(self,parent_dir):
+        self.parent_dir = parent_dir
+        if parent_dir[len(parent_dir)-1] != '/': self.parent_dir += '/'
+        dirs = [x for x in os.listdir(parent_dir)]
+        self.exps = [Wishart_Experiment(self.parent_dir + d) for d in dirs]
+
+    def min_cc(self):
+        cur_min = 1e10
+        for exp in self.exps:
+            this_min = exp.min_cc()
+            if this_min < cur_min: cur_min = this_min
+        return cur_min
+
+    def exp_max_score(self):
+        cur_max, max_exp = -1e10, None
+        for exp in self.exps:
+            this_max = exp.max_score()
+            if this_max > cur_max: 
+                cur_max = this_max
+                max_exp = exp
+        return max_exp
+
+    def exp_max_num_solutions(self):
+        cur_max, max_exp = -1e10, None
+        for exp in self.exps:
+            this_max = exp.num_solutions()
+            if this_max > cur_max: 
+                cur_max = this_max
+                max_exp = exp
+        return max_exp
+
+    def concatenate(self): # returns concatenated DataFrame
+        return pd.concat([exp.to_df() for exp in self.exps])
+
+exps = Wishart_Experiments(sys.argv[1])
+
